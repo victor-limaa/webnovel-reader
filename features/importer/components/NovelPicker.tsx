@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 
 import type { Novel } from '@/lib/data/types';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 import { styles } from '../styles';
 
@@ -11,18 +12,20 @@ type NovelPickerProps = {
 };
 
 export function NovelPicker({ novels, selectedNovelId, onSelect }: NovelPickerProps) {
+  const { t } = useI18n();
+
   if (novels.length === 0) {
     return null;
   }
 
   return (
     <View style={styles.field}>
-      <Text style={styles.label}>Adicionar em webnovel existente</Text>
+      <Text style={styles.label}>{t('import.existingNovel')}</Text>
       <View style={styles.novelPills}>
         <Pressable
           style={[styles.novelPill, selectedNovelId === null && styles.novelPillActive]}
           onPress={() => onSelect(null)}>
-          <Text style={[styles.novelPillText, selectedNovelId === null && styles.novelPillTextActive]}>Nova</Text>
+          <Text style={[styles.novelPillText, selectedNovelId === null && styles.novelPillTextActive]}>{t('import.newNovel')}</Text>
         </Pressable>
         {novels.map((novel) => (
           <Pressable

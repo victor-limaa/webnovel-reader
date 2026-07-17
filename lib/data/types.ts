@@ -1,5 +1,6 @@
 export type SourceType = 'txt' | 'pdf' | 'manual';
 export type ReaderTheme = 'paper' | 'night' | 'sepia';
+export type AppLanguage = 'pt-BR' | 'en';
 
 export type Novel = {
   id: string;
@@ -45,4 +46,8 @@ export type AudioSettings = {
   language: string;
   rate: number;
   pitch: number;
+};
+
+export type AppSettings = {
+  language: AppLanguage;
 };

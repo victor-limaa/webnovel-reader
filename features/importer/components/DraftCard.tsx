@@ -2,8 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, TextInput, View } from 'react-native';
 
 import { INPUT_PLACEHOLDER_COLOR } from '../constants';
+import { getDraftErrorMessage } from '../helpers';
 import { styles } from '../styles';
 import type { PickedChapterDraft } from '@/lib/import/importer';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { palette } from '@/lib/theme/tokens';
 
 type DraftCardProps = {
@@ -14,6 +16,8 @@ type DraftCardProps = {
 };
 
 export function DraftCard({ draft, index, onMove, onTitleChange }: DraftCardProps) {
+  const { t } = useI18n();
+
   return (
     <View style={[styles.draftCard, draft.error && styles.draftError]}>
       <View style={styles.draftTop}>
@@ -34,9 +38,9 @@ export function DraftCard({ draft, index, onMove, onTitleChange }: DraftCardProp
         placeholderTextColor={INPUT_PLACEHOLDER_COLOR}
       />
       <Text style={styles.draftMeta}>
-        {draft.originalFileName} · {draft.sourceType.toUpperCase()} · {draft.wordCount} palavras
+        {draft.originalFileName} · {t('common.sourceMeta', { source: draft.sourceType.toUpperCase(), count: draft.wordCount })}
       </Text>
-      {draft.error ? <Text style={styles.errorText}>{draft.error}</Text> : null}
+      {draft.error ? <Text style={styles.errorText}>{getDraftErrorMessage(draft.error, t)}</Text> : null}
     </View>
   );
 }

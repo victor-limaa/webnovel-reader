@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 import { styles } from '../styles';
 import type { ImportViewModel } from '../types';
@@ -37,34 +38,36 @@ export function ManualImportPanel({
   saving,
   saveManualImport,
 }: ManualImportPanelProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.panel}>
       <NovelPicker novels={novels} selectedNovelId={selectedNovelId} onSelect={setSelectedNovelId} />
 
       {!selectedNovelId ? (
         <Field
-          label="Titulo da webnovel"
+          label={t('import.novelTitle')}
           value={manualNovelTitle}
           onChangeText={setManualNovelTitle}
-          placeholder="Nome da novel"
+          placeholder={t('import.novelNamePlaceholder')}
         />
       ) : null}
       <Field
-        label="Titulo do capitulo"
+        label={t('import.chapterTitle')}
         value={manualChapterTitle}
         onChangeText={setManualChapterTitle}
-        placeholder="Capitulo 1"
+        placeholder={t('import.chapterTitlePlaceholder')}
       />
       <Field
-        label="Texto"
+        label={t('import.text')}
         value={manualText}
         onChangeText={setManualText}
-        placeholder="Cole o conteudo aqui..."
+        placeholder={t('import.textPlaceholder')}
         multiline
       />
-      <Text style={styles.summaryText}>{manualWordCount} palavras</Text>
+      <Text style={styles.summaryText}>{t('common.words', { count: manualWordCount })}</Text>
       <PrimaryButton
-        title={saving ? 'Salvando...' : 'Salvar capitulo'}
+        title={saving ? t('import.saving') : t('import.saveChapter')}
         icon="save"
         onPress={saveManualImport}
         disabled={saving}

@@ -13,6 +13,7 @@ import {
 } from '@/lib/data/repository';
 import type { AudioSettings, Chapter, ReaderSettings } from '@/lib/data/types';
 import { readChapterText } from '@/lib/files/text-storage';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { splitForSpeech, speakChunk, stopSpeech } from '@/lib/tts/speech-player';
 import { readerThemes } from '@/lib/theme/tokens';
 
@@ -22,6 +23,7 @@ export function useReaderViewModel() {
   const { chapterId } = useLocalSearchParams<{ chapterId: string }>();
   const db = useSQLiteContext();
   const router = useRouter();
+  const { t } = useI18n();
   const scrollRef = useRef<ScrollView>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [previous, setPrevious] = useState<Chapter | null>(null);
@@ -150,7 +152,7 @@ export function useReaderViewModel() {
         onStopped: () => setIsSpeaking(false),
         onError: (message) => {
           setIsSpeaking(false);
-          Alert.alert('Erro na narracao', message);
+          Alert.alert(t('reader.speechErrorTitle'), message);
         },
       });
     },

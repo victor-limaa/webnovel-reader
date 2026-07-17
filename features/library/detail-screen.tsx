@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { IconButton } from '@/components/ui/IconButton';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Screen } from '@/components/ui/Screen';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { palette } from '@/lib/theme/tokens';
 
 import { ChapterCard } from './components/ChapterCard';
@@ -14,6 +15,7 @@ import { styles } from './styles';
 
 export function NovelDetailScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { novel, chapters, progress, loading, resumeChapterId } = useNovelDetailViewModel();
 
   function handleBack() {
@@ -39,7 +41,7 @@ export function NovelDetailScreen() {
     return (
       <Screen>
         <IconButton icon="arrow-back" onPress={handleBack} />
-        <EmptyState icon="alert-circle" title="Webnovel nao encontrada" message="Ela pode ter sido removida deste dispositivo." />
+        <EmptyState icon="alert-circle" title={t('library.notFoundTitle')} message={t('library.notFoundMessage')} />
       </Screen>
     );
   }
@@ -53,13 +55,13 @@ export function NovelDetailScreen() {
       <NovelHero novel={novel} chapters={chapters} />
 
       <PrimaryButton
-        title={progress ? 'Continuar leitura' : 'Comecar leitura'}
+        title={progress ? t('library.continue') : t('library.start')}
         icon="play"
         onPress={() => resumeChapterId && router.push(`/reader/${resumeChapterId}`)}
         disabled={!resumeChapterId}
       />
 
-      <Text style={styles.sectionTitle}>Capitulos</Text>
+      <Text style={styles.sectionTitle}>{t('library.chapters')}</Text>
       <FlatList
         data={chapters}
         keyExtractor={(item) => item.id}

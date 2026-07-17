@@ -2,6 +2,7 @@ import { ActivityIndicator, Text, View } from 'react-native';
 
 import { IconButton } from '@/components/ui/IconButton';
 import { Screen } from '@/components/ui/Screen';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { palette } from '@/lib/theme/tokens';
 
 import { ReaderContent } from './components/ReaderContent';
@@ -12,6 +13,7 @@ import { styles } from './styles';
 
 export function ReaderScreen() {
   const viewModel = useReaderViewModel();
+  const { t } = useI18n();
 
   if (viewModel.loading) {
     return (
@@ -28,7 +30,7 @@ export function ReaderScreen() {
       <Screen>
         <IconButton icon="arrow-back" onPress={viewModel.handleBack} />
         <View style={styles.center}>
-          <Text style={styles.missing}>Capitulo nao encontrado.</Text>
+          <Text style={styles.missing}>{t('reader.missing')}</Text>
         </View>
       </Screen>
     );

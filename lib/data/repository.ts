@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { AudioSettings, Chapter, Novel, ReaderSettings, ReadingProgress, SourceType } from './types';
+import type { AppSettings, AudioSettings, Chapter, Novel, ReaderSettings, ReadingProgress, SourceType } from './types';
 
 type ChapterInput = {
   id: string;
@@ -218,5 +218,19 @@ export async function updateAudioSettings(db: SQLiteDatabase, settings: AudioSet
     settings.language,
     settings.rate,
     settings.pitch,
+  );
+}
+
+export async function getAppSettings(db: SQLiteDatabase) {
+  return db.getFirstAsync<AppSettings>('SELECT language FROM app_settings WHERE id = 1');
+}
+
+export async function updateAppSettings(db: SQLiteDatabase, settings: AppSettings) {
+  await db.runAsync(
+    `INSERT INTO app_settings (id, language)
+      VALUES (1, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        language = excluded.language`,
+    settings.language,
   );
 }

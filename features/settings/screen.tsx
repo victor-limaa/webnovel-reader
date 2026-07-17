@@ -3,15 +3,18 @@ import { ActivityIndicator, ScrollView, View } from 'react-native';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Screen } from '@/components/ui/Screen';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { palette } from '@/lib/theme/tokens';
 
 import { AppearancePanel } from './components/AppearancePanel';
+import { LanguagePanel } from './components/LanguagePanel';
 import { NarrationPanel } from './components/NarrationPanel';
 import { useSettingsViewModel } from './hooks/useSettingsViewModel';
 import { styles } from './styles';
 
 export function SettingsScreen() {
-  const { reader, setReader, audio, setAudio, voices, saving, save } = useSettingsViewModel();
+  const { t } = useI18n();
+  const { language, changeLanguage, reader, setReader, audio, setAudio, saving, save } = useSettingsViewModel();
 
   if (!reader || !audio) {
     return (
@@ -26,10 +29,11 @@ export function SettingsScreen() {
   return (
     <Screen>
       <ScrollView contentContainerStyle={styles.container}>
-        <PageHeader eyebrow="Leitura local" title="Ajustes" />
+        <PageHeader eyebrow={t('settings.eyebrow')} title={t('settings.title')} />
+        <LanguagePanel language={language} onChange={changeLanguage} />
         <AppearancePanel reader={reader} onChange={setReader} />
-        <NarrationPanel audio={audio} voices={voices} onChange={setAudio} />
-        <PrimaryButton title={saving ? 'Salvando...' : 'Salvar ajustes'} icon="save" onPress={save} disabled={saving} />
+        <NarrationPanel audio={audio} onChange={setAudio} />
+        <PrimaryButton title={saving ? t('import.saving') : t('settings.save')} icon="save" onPress={save} disabled={saving} />
       </ScrollView>
     </Screen>
   );

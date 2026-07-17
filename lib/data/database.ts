@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 export async function migrateDatabase(db: SQLiteDatabase) {
   await db.execAsync('PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;');
@@ -61,6 +61,11 @@ export async function migrateDatabase(db: SQLiteDatabase) {
         pitch REAL NOT NULL
       );
 
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        language TEXT NOT NULL
+      );
+
       CREATE INDEX IF NOT EXISTS idx_chapters_novel_order
         ON chapters (novelId, chapterNumber);
     `);
@@ -79,6 +84,21 @@ export async function migrateDatabase(db: SQLiteDatabase) {
       'pt-BR',
       0.92,
       1,
+    );
+  }
+
+  if (currentVersion < 2) {
+    await db.execAsync(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        language TEXT NOT NULL
+      );
+    `);
+
+    await db.runAsync(
+      'INSERT OR IGNORE INTO app_settings (id, language) VALUES (?, ?)',
+      1,
+      'pt-BR',
     );
   }
 

@@ -21,13 +21,13 @@ function getExtension(name: string) {
   return last?.toLowerCase() ?? '';
 }
 
-function cleanTitleFromFileName(name: string, index: number) {
+function cleanTitleFromFileName(name: string, index: number, getFallbackTitle: (chapterNumber: number) => string) {
   const withoutExtension = name.replace(/\.[^/.]+$/, '');
   const title = withoutExtension.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-  return title || `Capitulo ${index + 1}`;
+  return title || getFallbackTitle(index + 1);
 }
 
-export async function pickChapterFiles() {
+export async function pickChapterFiles(getFallbackTitle: (chapterNumber: number) => string = (chapterNumber) => `Chapter ${chapterNumber}`) {
   const result = await DocumentPicker.getDocumentAsync({
     type: ['text/plain', 'application/pdf'],
     multiple: true,
@@ -55,7 +55,7 @@ export async function pickChapterFiles() {
 
       drafts.push({
         id: createId('draft'),
-        title: cleanTitleFromFileName(asset.name, index),
+        title: cleanTitleFromFileName(asset.name, index, getFallbackTitle),
         chapterNumber: index + 1,
         sourceType,
         originalFileName: asset.name,
@@ -66,7 +66,7 @@ export async function pickChapterFiles() {
     } catch (error) {
       drafts.push({
         id: createId('draft'),
-        title: cleanTitleFromFileName(asset.name, index),
+        title: cleanTitleFromFileName(asset.name, index, getFallbackTitle),
         chapterNumber: index + 1,
         sourceType,
         originalFileName: asset.name,

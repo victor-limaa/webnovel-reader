@@ -46,6 +46,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  segmentButtonActive: {
+    backgroundColor: palette.umber,
+  },
   segmentText: {
     color: palette.umber,
     fontWeight: '900',

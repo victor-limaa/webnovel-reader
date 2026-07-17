@@ -5,6 +5,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { Screen } from '@/components/ui/Screen';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 import { LibraryHero } from './components/LibraryHero';
 import { NovelCard } from './components/NovelCard';
@@ -13,15 +14,16 @@ import { styles } from './styles';
 
 export function LibraryScreen() {
   const router = useRouter();
+  const { t } = useI18n();
   const { novels, loading, refresh } = useLibraryViewModel();
 
   return (
     <Screen>
       <View style={styles.header}>
         <View>
-          <PageHeader eyebrow="Arquivo local" title="Biblioteca" />
+          <PageHeader eyebrow={t('library.eyebrow')} title={t('library.title')} />
         </View>
-        <PrimaryButton title="Importar" icon="add" onPress={() => router.push('/import')} />
+        <PrimaryButton title={t('library.import')} icon="add" onPress={() => router.push('/import')} />
       </View>
 
       <LibraryHero />
@@ -38,8 +40,8 @@ export function LibraryScreen() {
         ListEmptyComponent={
           <EmptyState
             icon="library"
-            title="Sua estante ainda esta vazia"
-            message="Importe arquivos TXT/PDF ou cole um capitulo para criar sua primeira webnovel local."
+            title={t('library.emptyTitle')}
+            message={t('library.emptyMessage')}
           />
         }
       />

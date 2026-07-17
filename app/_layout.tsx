@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { I18nProvider } from '@/lib/i18n/I18nProvider';
 import { migrateDatabase } from '@/lib/data/database';
 import { palette } from '@/lib/theme/tokens';
 
@@ -28,11 +29,13 @@ export default function RootLayout() {
             </View>
           }>
           <SQLiteProvider databaseName="webnovel-reader.db" onInit={migrateDatabase} useSuspense>
-            <Stack>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="novel/[novelId]" options={{ headerShown: false }} />
-              <Stack.Screen name="reader/[chapterId]" options={{ headerShown: false }} />
-            </Stack>
+            <I18nProvider>
+              <Stack>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="novel/[novelId]" options={{ headerShown: false }} />
+                <Stack.Screen name="reader/[chapterId]" options={{ headerShown: false }} />
+              </Stack>
+            </I18nProvider>
           </SQLiteProvider>
         </Suspense>
         <StatusBar style="auto" />

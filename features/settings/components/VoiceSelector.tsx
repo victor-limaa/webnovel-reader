@@ -1,39 +1,26 @@
-import * as Speech from 'expo-speech';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 
 import type { AudioSettings } from '@/lib/data/types';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
-import { getVoiceOptions } from '../helpers';
 import { styles } from '../styles';
 
 type VoiceSelectorProps = {
   audio: AudioSettings;
-  voices: Speech.Voice[];
-  onChange: (settings: AudioSettings) => void;
 };
 
-export function VoiceSelector({ audio, voices, onChange }: VoiceSelectorProps) {
-  const voiceOptions = getVoiceOptions(voices, audio.language);
+export function VoiceSelector({ audio }: VoiceSelectorProps) {
+  const { t } = useI18n();
 
   return (
     <>
-      <Text style={styles.label}>Voz</Text>
+      <Text style={styles.label}>{t('settings.ttsVoice')}</Text>
       <View style={styles.voiceList}>
-        <Pressable
-          style={[styles.voiceOption, audio.voiceIdentifier === null && styles.voiceOptionActive]}
-          onPress={() => onChange({ ...audio, voiceIdentifier: null })}>
-          <Text style={[styles.voiceText, audio.voiceIdentifier === null && styles.voiceTextActive]}>Padrao do dispositivo</Text>
-        </Pressable>
-        {voiceOptions.map((voice) => (
-          <Pressable
-            key={voice.identifier}
-            style={[styles.voiceOption, audio.voiceIdentifier === voice.identifier && styles.voiceOptionActive]}
-            onPress={() => onChange({ ...audio, voiceIdentifier: voice.identifier, language: voice.language })}>
-            <Text style={[styles.voiceText, audio.voiceIdentifier === voice.identifier && styles.voiceTextActive]} numberOfLines={1}>
-              {voice.name} · {voice.language}
-            </Text>
-          </Pressable>
-        ))}
+        <View style={[styles.voiceOption, styles.voiceOptionActive]}>
+          <Text style={[styles.voiceText, styles.voiceTextActive]} numberOfLines={1}>
+            {t('settings.deviceDefault')} · {audio.language}
+          </Text>
+        </View>
       </View>
     </>
   );

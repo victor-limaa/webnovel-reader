@@ -1,7 +1,7 @@
-import * as Speech from 'expo-speech';
 import { Text, View } from 'react-native';
 
 import type { AudioSettings } from '@/lib/data/types';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 
 import { styles } from '../styles';
 import { Stepper } from './Stepper';
@@ -9,16 +9,17 @@ import { VoiceSelector } from './VoiceSelector';
 
 type NarrationPanelProps = {
   audio: AudioSettings;
-  voices: Speech.Voice[];
   onChange: (settings: AudioSettings) => void;
 };
 
-export function NarrationPanel({ audio, voices, onChange }: NarrationPanelProps) {
+export function NarrationPanel({ audio, onChange }: NarrationPanelProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.panel}>
-      <Text style={styles.sectionTitle}>Narracao</Text>
+      <Text style={styles.sectionTitle}>{t('settings.narration')}</Text>
       <Stepper
-        label="Velocidade"
+        label={t('settings.rate')}
         value={Number(audio.rate.toFixed(2))}
         suffix="x"
         min={0.6}
@@ -27,7 +28,7 @@ export function NarrationPanel({ audio, voices, onChange }: NarrationPanelProps)
         onChange={(rate) => onChange({ ...audio, rate })}
       />
       <Stepper
-        label="Tom"
+        label={t('settings.pitch')}
         value={Number(audio.pitch.toFixed(2))}
         suffix="x"
         min={0.7}
@@ -35,7 +36,7 @@ export function NarrationPanel({ audio, voices, onChange }: NarrationPanelProps)
         step={0.05}
         onChange={(pitch) => onChange({ ...audio, pitch })}
       />
-      <VoiceSelector audio={audio} voices={voices} onChange={onChange} />
+      <VoiceSelector audio={audio} />
     </View>
   );
 }

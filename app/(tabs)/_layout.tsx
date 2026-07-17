@@ -4,10 +4,12 @@ import React from 'react';
 import { HapticTab } from '@/components/haptic-tab';
 import { Colors } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { t } = useI18n();
 
   return (
     <Tabs
@@ -19,21 +21,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Biblioteca',
+          title: t('tabs.library'),
           tabBarIcon: ({ color }) => <Ionicons size={24} name="library" color={color} />,
         }}
       />
       <Tabs.Screen
         name="import"
         options={{
-          title: 'Importar',
+          title: t('tabs.import'),
           tabBarIcon: ({ color }) => <Ionicons size={24} name="add-circle" color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Ajustes',
+          title: t('tabs.settings'),
           tabBarIcon: ({ color }) => <Ionicons size={24} name="options" color={color} />,
         }}
       />

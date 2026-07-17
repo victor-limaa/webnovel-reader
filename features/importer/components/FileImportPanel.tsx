@@ -1,6 +1,7 @@
 import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { palette } from '@/lib/theme/tokens';
 
 import { styles } from '../styles';
@@ -36,17 +37,19 @@ export function FileImportPanel({
   saveFileImport,
   updateDraftTitle,
 }: FileImportPanelProps) {
+  const { t } = useI18n();
+
   return (
     <View style={styles.panel}>
       <Field
-        label="Titulo da webnovel"
+        label={t('import.novelTitle')}
         value={novelTitle}
         onChangeText={setNovelTitle}
-        placeholder="Ex.: Lord of the Mysteries"
+        placeholder={t('import.novelTitlePlaceholder')}
       />
 
       <PrimaryButton
-        title={loadingFiles ? 'Lendo arquivos...' : 'Selecionar TXT/PDF'}
+        title={loadingFiles ? t('import.readingFiles') : t('import.pickFiles')}
         icon="folder-open"
         onPress={handlePickFiles}
         disabled={loadingFiles || saving}
@@ -57,8 +60,8 @@ export function FileImportPanel({
       {drafts.length > 0 ? (
         <View style={styles.summary}>
           <Text style={styles.summaryText}>
-            {validDrafts.length} capitulos validos
-            {failedDrafts > 0 ? `, ${failedDrafts} com erro` : ''}
+            {t('import.validChapters', { count: validDrafts.length })}
+            {failedDrafts > 0 ? t('import.failedChapters', { count: failedDrafts }) : ''}
           </Text>
         </View>
       ) : null}
@@ -74,7 +77,7 @@ export function FileImportPanel({
       />
 
       <PrimaryButton
-        title={saving ? 'Salvando...' : 'Salvar webnovel'}
+        title={saving ? t('import.saving') : t('import.saveNovel')}
         icon="checkmark"
         onPress={saveFileImport}
         disabled={saving || validDrafts.length === 0}

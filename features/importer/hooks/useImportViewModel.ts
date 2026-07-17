@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { addManualChapter, createNovelWithChapters, getNextChapterNumber, listNovels } from '@/lib/data/repository';
 import type { Novel } from '@/lib/data/types';
 import { countWords, createId, normalizeText, saveChapterText } from '@/lib/files/text-storage';
+import { useI18n } from '@/lib/i18n/I18nProvider';
 import { persistDraftText, pickChapterFiles, type PickedChapterDraft } from '@/lib/import/importer';
 
 import { getInitialNovelTitle, reorderDrafts } from '../helpers';
@@ -14,6 +15,7 @@ import type { ImportMode, ImportViewModel } from '../types';
 export function useImportViewModel(): ImportViewModel {
   const db = useSQLiteContext();
   const router = useRouter();
+  const { t } = useI18n();
   const [mode, setMode] = useState<ImportMode>('files');
   const [novelTitle, setNovelTitle] = useState('');
   const [drafts, setDrafts] = useState<PickedChapterDraft[]>([]);
@@ -36,13 +38,13 @@ export function useImportViewModel(): ImportViewModel {
   async function handlePickFiles() {
     setLoadingFiles(true);
     try {
-      const picked = await pickChapterFiles();
+      const picked = await pickChapterFiles((chapterNumber) => t('common.chapter', { number: chapterNumber }));
       if (picked.length > 0) {
         setDrafts(picked);
         setNovelTitle((current) => current || getInitialNovelTitle(picked[0]));
       }
     } catch (error) {
-      Alert.alert('Nao foi possivel importar', error instanceof Error ? error.message : 'Tente novamente.');
+      Alert.alert(t('import.pickErrorTitle'), error instanceof Error ? error.message : t('import.pickErrorFallback'));
     } finally {
       setLoadingFiles(false);
     }
@@ -59,7 +61,7 @@ export function useImportViewModel(): ImportViewModel {
   async function saveFileImport() {
     const title = novelTitle.trim();
     if (!title || validDrafts.length === 0) {
-      Alert.alert('Revise a importacao', 'Informe o titulo da webnovel e mantenha ao menos um capitulo valido.');
+      Alert.alert(t('import.reviewTitle'), t('import.reviewMessage'));
       return;
     }
 
@@ -73,7 +75,7 @@ export function useImportViewModel(): ImportViewModel {
       await createNovelWithChapters(db, { id: novelId, title }, chapters);
       router.replace(`/novel/${novelId}`);
     } catch (error) {
-      Alert.alert('Erro ao salvar', error instanceof Error ? error.message : 'Nao foi possivel salvar a webnovel.');
+      Alert.alert(t('import.saveErrorTitle'), error instanceof Error ? error.message : t('import.saveNovelError'));
     } finally {
       setSaving(false);
     }
@@ -85,7 +87,7 @@ export function useImportViewModel(): ImportViewModel {
     const title = existingNovel?.title ?? manualNovelTitle.trim();
 
     if (!title || !manualChapterTitle.trim() || !normalizedText) {
-      Alert.alert('Complete os campos', 'Informe webnovel, titulo do capitulo e texto.');
+      Alert.alert(t('import.completeTitle'), t('import.completeMessage'));
       return;
     }
 
@@ -113,7 +115,7 @@ export function useImportViewModel(): ImportViewModel {
 
       router.replace(`/reader/${chapterId}`);
     } catch (error) {
-      Alert.alert('Erro ao salvar', error instanceof Error ? error.message : 'Nao foi possivel salvar o capitulo.');
+      Alert.alert(t('import.saveErrorTitle'), error instanceof Error ? error.message : t('import.saveChapterError'));
     } finally {
       setSaving(false);
     }
