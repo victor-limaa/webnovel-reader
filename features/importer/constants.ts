@@ -1,0 +1,1 @@
+export const INPUT_PLACEHOLDER_COLOR = '#A9937C';

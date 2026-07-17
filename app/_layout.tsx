@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Suspense } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import 'react-native-reanimated';
+import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { migrateDatabase } from '@/lib/data/database';
@@ -18,22 +19,24 @@ export default function RootLayout() {
   const colorScheme = useColorScheme();
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Suspense
-        fallback={
-          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.paper }}>
-            <ActivityIndicator color={palette.umber} />
-          </View>
-        }>
-        <SQLiteProvider databaseName="webnovel-reader.db" onInit={migrateDatabase} useSuspense>
-          <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="novel/[novelId]" options={{ headerShown: false }} />
-            <Stack.Screen name="reader/[chapterId]" options={{ headerShown: false }} />
-          </Stack>
-        </SQLiteProvider>
-      </Suspense>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+    <SafeAreaProvider initialMetrics={initialWindowMetrics}>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Suspense
+          fallback={
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: palette.paper }}>
+              <ActivityIndicator color={palette.umber} />
+            </View>
+          }>
+          <SQLiteProvider databaseName="webnovel-reader.db" onInit={migrateDatabase} useSuspense>
+            <Stack>
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="novel/[novelId]" options={{ headerShown: false }} />
+              <Stack.Screen name="reader/[chapterId]" options={{ headerShown: false }} />
+            </Stack>
+          </SQLiteProvider>
+        </Suspense>
+        <StatusBar style="auto" />
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
