@@ -56,7 +56,8 @@ export const styles = StyleSheet.create({
     paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    gap: 24,
   },
   navButton: {
     minWidth: 44,

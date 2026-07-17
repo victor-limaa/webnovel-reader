@@ -17,7 +17,9 @@ import { useI18n } from '@/lib/i18n/I18nProvider';
 import { splitForSpeech, speakChunk, stopSpeech } from '@/lib/tts/speech-player';
 import { readerThemes } from '@/lib/theme/tokens';
 
-import { getChunkIndexForOffset, getScrollProgress } from '../helpers';
+import { getChunkIndexForOffset, getEstimatedSpeechOffset, getScrollProgress, getSeekOffset } from '../helpers';
+
+const SEEK_SECONDS = 10;
 
 export function useReaderViewModel() {
   const { chapterId } = useLocalSearchParams<{ chapterId: string }>();
@@ -36,6 +38,9 @@ export function useReaderViewModel() {
   const [charOffset, setCharOffset] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
+  const speechStartOffsetRef = useRef(0);
+  const speechStartedAtRef = useRef<number | null>(null);
+  const speechTokenRef = useRef(0);
 
   useEffect(() => {
     async function load() {
@@ -46,6 +51,8 @@ export function useReaderViewModel() {
       setLoading(true);
       await stopSpeech();
       setIsSpeaking(false);
+      speechStartedAtRef.current = null;
+      speechTokenRef.current += 1;
 
       const chapterResult = await getChapter(db, chapterId);
       if (!chapterResult) {
@@ -122,20 +129,57 @@ export function useReaderViewModel() {
     await persistProgress(charOffset, scrollRatio);
   }
 
+  function getCurrentSpeechOffset() {
+    return getEstimatedSpeechOffset({
+      baseOffset: isSpeaking ? speechStartOffsetRef.current : charOffset,
+      startedAt: isSpeaking ? speechStartedAtRef.current : null,
+      rate: audioSettings?.rate ?? 1,
+      textLength: text.length,
+    });
+  }
+
   const playFromChunk = useCallback(
-    async (index: number) => {
+    async (index: number, offset?: number) => {
       if (!audioSettings || !chapter || chunks.length === 0) {
         return;
       }
 
       const boundedIndex = Math.max(0, Math.min(index, chunks.length - 1));
       const chunk = chunks[boundedIndex];
+      const requestedOffset = Math.max(chunk.start, Math.min(offset ?? chunk.start, chunk.end));
+      const relativeOffset = Math.max(0, Math.min(chunk.text.length, requestedOffset - chunk.start));
+      const trimmedText = chunk.text.slice(relativeOffset);
+      const trimDelta = trimmedText.length - trimmedText.trimStart().length;
+      const speechText = trimmedText.trimStart();
+      const speechOffset = requestedOffset + trimDelta;
+
+      if (!speechText) {
+        if (boundedIndex + 1 < chunks.length) {
+          playFromChunk(boundedIndex + 1);
+          return;
+        }
+
+        setIsSpeaking(false);
+        speechStartedAtRef.current = null;
+        return;
+      }
+
       setCurrentChunkIndex(boundedIndex);
       setIsSpeaking(true);
-      await persistProgress(chunk.start, chunk.start / Math.max(1, text.length));
+      setCharOffset(speechOffset);
+      setScrollRatio(speechOffset / Math.max(1, text.length));
+      speechStartOffsetRef.current = speechOffset;
+      speechStartedAtRef.current = Date.now();
+      speechTokenRef.current += 1;
+      const speechToken = speechTokenRef.current;
+      await persistProgress(speechOffset, speechOffset / Math.max(1, text.length));
 
-      speakChunk(chunk.text, audioSettings, {
+      speakChunk(speechText, audioSettings, {
         onDone: async () => {
+          if (speechToken !== speechTokenRef.current) {
+            return;
+          }
+
           const nextIndex = boundedIndex + 1;
           await persistProgress(chunk.end, chunk.end / Math.max(1, text.length));
 
@@ -145,13 +189,26 @@ export function useReaderViewModel() {
           }
 
           setIsSpeaking(false);
+          speechStartedAtRef.current = null;
           if (next) {
             router.replace(`/reader/${next.id}`);
           }
         },
-        onStopped: () => setIsSpeaking(false),
-        onError: (message) => {
+        onStopped: () => {
+          if (speechToken !== speechTokenRef.current) {
+            return;
+          }
+
           setIsSpeaking(false);
+          speechStartedAtRef.current = null;
+        },
+        onError: (message) => {
+          if (speechToken !== speechTokenRef.current) {
+            return;
+          }
+
+          setIsSpeaking(false);
+          speechStartedAtRef.current = null;
           Alert.alert(t('reader.speechErrorTitle'), message);
         },
       });
@@ -160,19 +217,38 @@ export function useReaderViewModel() {
   );
 
   async function handlePlay() {
+    speechTokenRef.current += 1;
     await stopSpeech();
     playFromChunk(getChunkIndexForOffset(chunks, charOffset, currentChunkIndex));
   }
 
-  async function handleStop() {
+  async function handlePause() {
+    const nextOffset = getCurrentSpeechOffset();
+    const nextRatio = nextOffset / Math.max(1, text.length);
+
+    speechTokenRef.current += 1;
     await stopSpeech();
     setIsSpeaking(false);
-    await persistProgress(charOffset, scrollRatio);
+    speechStartedAtRef.current = null;
+    setCharOffset(nextOffset);
+    setScrollRatio(nextRatio);
+    await persistProgress(nextOffset, nextRatio);
   }
 
-  async function moveAudio(direction: -1 | 1) {
+  async function seekAudio(direction: -1 | 1) {
+    const estimatedOffset = getCurrentSpeechOffset();
+    const nextOffset = getSeekOffset({
+      currentOffset: estimatedOffset,
+      direction,
+      seconds: SEEK_SECONDS,
+      rate: audioSettings?.rate ?? 1,
+      textLength: text.length,
+    });
+    const nextChunkIndex = getChunkIndexForOffset(chunks, nextOffset, currentChunkIndex);
+
+    speechTokenRef.current += 1;
     await stopSpeech();
-    playFromChunk(currentChunkIndex + direction);
+    playFromChunk(nextChunkIndex, nextOffset);
   }
 
   function handleBack() {
@@ -213,10 +289,10 @@ export function useReaderViewModel() {
     scrollRef,
     handleBack,
     handlePlay,
-    handleStop,
+    handlePause,
     handleScroll,
     handleScrollEnd,
-    moveAudio,
+    seekAudio,
     openAdjacentChapter,
     openChapterList,
   };

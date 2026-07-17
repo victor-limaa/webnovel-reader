@@ -54,14 +54,11 @@ export function ReaderScreen() {
         onScrollEnd={viewModel.handleScrollEnd}
       />
       <ReaderPlayer
-        previous={viewModel.previous}
-        next={viewModel.next}
         isSpeaking={viewModel.isSpeaking}
         theme={viewModel.theme}
         onPlay={viewModel.handlePlay}
-        onStop={viewModel.handleStop}
-        onMoveAudio={viewModel.moveAudio}
-        onOpenChapter={viewModel.openAdjacentChapter}
+        onPause={viewModel.handlePause}
+        onMoveAudio={viewModel.seekAudio}
       />
     </Screen>
   );
