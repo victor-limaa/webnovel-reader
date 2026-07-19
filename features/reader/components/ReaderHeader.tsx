@@ -6,7 +6,7 @@ import { useI18n } from '@/lib/i18n/I18nProvider';
 import { styles } from '../styles';
 import type { ReaderHeaderProps } from '../types';
 
-export function ReaderHeader({ chapter, theme, onBack, onOpenChapterList }: ReaderHeaderProps) {
+export function ReaderHeader({ chapter, theme, onBack, onOpenChapterList, onOpenSettings }: ReaderHeaderProps) {
   const { t } = useI18n();
 
   return (
@@ -19,6 +19,7 @@ export function ReaderHeader({ chapter, theme, onBack, onOpenChapterList }: Read
         </Text>
       </View>
       <IconButton icon="list" onPress={onOpenChapterList} />
+      <IconButton icon="settings-outline" onPress={onOpenSettings} />
     </View>
   );
 }

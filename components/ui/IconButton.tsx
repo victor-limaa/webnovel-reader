@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, type PressableProps } from 'react-native';
 
+import { useAppTheme } from '@/lib/theme/AppThemeProvider';
 import { palette } from '@/lib/theme/tokens';
 
 type IconButtonProps = PressableProps & {
@@ -9,13 +10,17 @@ type IconButtonProps = PressableProps & {
 };
 
 export function IconButton({ icon, tone = 'light', style, ...props }: IconButtonProps) {
+  const { theme } = useAppTheme();
+  const backgroundColor = tone === 'light' ? theme.panel : tone === 'accent' ? theme.accent : palette.umberDark;
+  const borderColor = tone === 'light' ? theme.line : backgroundColor;
+  const iconColor = tone === 'light' ? theme.accent : theme.panel;
+
   return (
     <Pressable
       accessibilityRole="button"
       style={(state) => [
         styles.button,
-        tone === 'dark' && styles.dark,
-        tone === 'accent' && styles.accent,
+        { backgroundColor, borderColor },
         state.pressed && styles.pressed,
         typeof style === 'function' ? style(state) : style,
       ]}
@@ -23,7 +28,7 @@ export function IconButton({ icon, tone = 'light', style, ...props }: IconButton
       <Ionicons
         name={icon}
         size={22}
-        color={tone === 'light' ? palette.umber : palette.panel}
+        color={iconColor}
       />
     </Pressable>
   );
@@ -39,14 +44,6 @@ const styles = StyleSheet.create({
     backgroundColor: palette.panel,
     borderWidth: 1,
     borderColor: palette.line,
-  },
-  dark: {
-    backgroundColor: palette.umberDark,
-    borderColor: palette.umberDark,
-  },
-  accent: {
-    backgroundColor: palette.umber,
-    borderColor: palette.umber,
   },
   pressed: {
     opacity: 0.72,

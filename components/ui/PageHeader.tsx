@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { palette } from '@/lib/theme/tokens';
+import { useAppTheme } from '@/lib/theme/AppThemeProvider';
 
 type PageHeaderProps = {
   eyebrow: string;
@@ -8,10 +8,12 @@ type PageHeaderProps = {
 };
 
 export function PageHeader({ eyebrow, title }: PageHeaderProps) {
+  const { theme } = useAppTheme();
+
   return (
     <View style={styles.header}>
-      <Text style={styles.eyebrow}>{eyebrow}</Text>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={[styles.eyebrow, { color: theme.accent }]}>{eyebrow}</Text>
+      <Text style={[styles.title, { color: theme.text }]}>{title}</Text>
     </View>
   );
 }
@@ -21,14 +23,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   eyebrow: {
-    color: palette.umber,
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0,
     textTransform: 'uppercase',
   },
   title: {
-    color: palette.ink,
     fontSize: 34,
     fontWeight: '900',
   },

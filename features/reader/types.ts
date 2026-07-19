@@ -8,6 +8,7 @@ export type ReaderHeaderProps = {
   theme: ReaderTheme;
   onBack: () => void;
   onOpenChapterList: () => void;
+  onOpenSettings: () => void;
 };
 
 export type ReaderContentProps = {

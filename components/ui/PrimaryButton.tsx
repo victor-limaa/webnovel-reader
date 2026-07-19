@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, type PressableProps } from 'react-native';
 
+import { useAppTheme } from '@/lib/theme/AppThemeProvider';
 import { palette } from '@/lib/theme/tokens';
 
 type PrimaryButtonProps = PressableProps & {
@@ -10,6 +11,10 @@ type PrimaryButtonProps = PressableProps & {
 };
 
 export function PrimaryButton({ title, icon, variant = 'primary', style, disabled, ...props }: PrimaryButtonProps) {
+  const { theme } = useAppTheme();
+  const isSubtle = variant === 'secondary' || variant === 'ghost';
+  const iconColor = isSubtle ? theme.accent : theme.panel;
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -17,6 +22,8 @@ export function PrimaryButton({ title, icon, variant = 'primary', style, disable
       style={(state) => [
         styles.button,
         styles[variant],
+        variant === 'primary' && { backgroundColor: theme.accent },
+        variant === 'secondary' && { backgroundColor: theme.panel, borderColor: theme.line },
         disabled && styles.disabled,
         state.pressed && !disabled && styles.pressed,
         typeof style === 'function' ? style(state) : style,
@@ -26,10 +33,10 @@ export function PrimaryButton({ title, icon, variant = 'primary', style, disable
         <Ionicons
           name={icon}
           size={19}
-          color={variant === 'secondary' || variant === 'ghost' ? palette.umber : palette.panel}
+          color={iconColor}
         />
       ) : null}
-      <Text style={[styles.text, (variant === 'secondary' || variant === 'ghost') && styles.secondaryText]}>
+      <Text style={[styles.text, { color: theme.panel }, isSubtle && { color: theme.accent }]}>
         {title}
       </Text>
     </Pressable>
@@ -64,9 +71,6 @@ const styles = StyleSheet.create({
     color: palette.panel,
     fontWeight: '800',
     fontSize: 15,
-  },
-  secondaryText: {
-    color: palette.umber,
   },
   disabled: {
     opacity: 0.45,

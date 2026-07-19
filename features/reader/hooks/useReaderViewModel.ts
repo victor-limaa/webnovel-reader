@@ -1,3 +1,5 @@
+import * as Speech from 'expo-speech';
+import * as Brightness from 'expo-brightness';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,12 +10,13 @@ import {
   getAudioSettings,
   getChapter,
   getProgress,
-  getReaderSettings,
   saveProgress,
+  updateAudioSettings,
 } from '@/lib/data/repository';
-import type { AudioSettings, Chapter, ReaderSettings } from '@/lib/data/types';
+import type { AudioSettings, Chapter, ReaderSettings, ReaderTheme } from '@/lib/data/types';
 import { readChapterText } from '@/lib/files/text-storage';
 import { useI18n } from '@/lib/i18n/I18nProvider';
+import { useAppTheme } from '@/lib/theme/AppThemeProvider';
 import { splitForSpeech, speakChunk, stopSpeech } from '@/lib/tts/speech-player';
 import { readerThemes } from '@/lib/theme/tokens';
 
@@ -26,13 +29,17 @@ export function useReaderViewModel() {
   const db = useSQLiteContext();
   const router = useRouter();
   const { t } = useI18n();
+  const { readerSettings, updateReaderSettings } = useAppTheme();
   const scrollRef = useRef<ScrollView>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [previous, setPrevious] = useState<Chapter | null>(null);
   const [next, setNext] = useState<Chapter | null>(null);
   const [text, setText] = useState('');
-  const [settings, setSettings] = useState<ReaderSettings | null>(null);
+  const [settings, setSettings] = useState<ReaderSettings | null>(readerSettings);
   const [audioSettings, setAudioSettings] = useState<AudioSettings | null>(null);
+  const [voices, setVoices] = useState<Speech.Voice[]>([]);
+  const [brightness, setBrightness] = useState(1);
+  const [settingsVisible, setSettingsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [scrollRatio, setScrollRatio] = useState(0);
   const [charOffset, setCharOffset] = useState(0);
@@ -61,17 +68,20 @@ export function useReaderViewModel() {
         return;
       }
 
-      const [readerSettings, ttsSettings, progress, adjacent, content] = await Promise.all([
-        getReaderSettings(db),
+      const [ttsSettings, progress, adjacent, content, availableVoices, currentBrightness] = await Promise.all([
         getAudioSettings(db),
         getProgress(db, chapterResult.novelId),
         getAdjacentChapters(db, chapterResult),
         readChapterText(chapterResult.textFileUri),
+        Speech.getAvailableVoicesAsync().catch(() => []),
+        Brightness.getSystemBrightnessAsync().catch(() => 1),
       ]);
 
       setChapter(chapterResult);
       setSettings(readerSettings);
       setAudioSettings(ttsSettings);
+      setVoices(availableVoices);
+      setBrightness(currentBrightness);
       setPrevious(adjacent.previous ?? null);
       setNext(adjacent.next ?? null);
       setText(content);
@@ -87,6 +97,10 @@ export function useReaderViewModel() {
       stopSpeech();
     };
   }, [db, chapterId]);
+
+  useEffect(() => {
+    setSettings(readerSettings);
+  }, [readerSettings]);
 
   const chunks = useMemo(() => splitForSpeech(text), [text]);
   const theme = readerThemes[settings?.theme ?? 'paper'];
@@ -139,8 +153,8 @@ export function useReaderViewModel() {
   }
 
   const playFromChunk = useCallback(
-    async (index: number, offset?: number) => {
-      if (!audioSettings || !chapter || chunks.length === 0) {
+    async (index: number, offset?: number, playbackSettings: AudioSettings | null = audioSettings) => {
+      if (!playbackSettings || !chapter || chunks.length === 0) {
         return;
       }
 
@@ -155,7 +169,7 @@ export function useReaderViewModel() {
 
       if (!speechText) {
         if (boundedIndex + 1 < chunks.length) {
-          playFromChunk(boundedIndex + 1);
+          playFromChunk(boundedIndex + 1, undefined, playbackSettings);
           return;
         }
 
@@ -174,7 +188,7 @@ export function useReaderViewModel() {
       const speechToken = speechTokenRef.current;
       await persistProgress(speechOffset, speechOffset / Math.max(1, text.length));
 
-      speakChunk(speechText, audioSettings, {
+      speakChunk(speechText, playbackSettings, {
         onDone: async () => {
           if (speechToken !== speechTokenRef.current) {
             return;
@@ -184,7 +198,7 @@ export function useReaderViewModel() {
           await persistProgress(chunk.end, chunk.end / Math.max(1, text.length));
 
           if (nextIndex < chunks.length) {
-            playFromChunk(nextIndex);
+            playFromChunk(nextIndex, undefined, playbackSettings);
             return;
           }
 
@@ -251,6 +265,77 @@ export function useReaderViewModel() {
     playFromChunk(nextChunkIndex, nextOffset);
   }
 
+  async function updateReaderTheme(themeName: ReaderTheme) {
+    if (!settings) {
+      return;
+    }
+
+    const nextSettings = { ...settings, theme: themeName };
+    setSettings(nextSettings);
+    await updateReaderSettings(nextSettings);
+  }
+
+  async function updateFontSize(fontSize: number) {
+    if (!settings) {
+      return;
+    }
+
+    const nextSettings = { ...settings, fontSize };
+    setSettings(nextSettings);
+    await updateReaderSettings(nextSettings);
+  }
+
+  async function updateBrightness(brightnessValue: number) {
+    const nextBrightness = Math.max(0.05, Math.min(1, brightnessValue));
+    setBrightness(nextBrightness);
+
+    try {
+      const permission = await Brightness.requestPermissionsAsync();
+      if (permission.granted) {
+        await Brightness.setSystemBrightnessAsync(nextBrightness);
+        return;
+      }
+
+      await Brightness.setBrightnessAsync(nextBrightness);
+    } catch {
+      await Brightness.setBrightnessAsync(nextBrightness).catch(() => undefined);
+    }
+  }
+
+  async function updateAudioRate(rate: number) {
+    if (!audioSettings) {
+      return;
+    }
+
+    const shouldResume = isSpeaking;
+    const nextOffset = shouldResume ? getCurrentSpeechOffset() : charOffset;
+    const nextChunkIndex = getChunkIndexForOffset(chunks, nextOffset, currentChunkIndex);
+    const nextSettings = { ...audioSettings, rate };
+    setAudioSettings(nextSettings);
+    await updateAudioSettings(db, nextSettings);
+
+    if (shouldResume) {
+      speechTokenRef.current += 1;
+      await stopSpeech();
+      playFromChunk(nextChunkIndex, nextOffset, nextSettings);
+    }
+  }
+
+  async function updateNarrationVoice(voiceIdentifier: string | null) {
+    if (!audioSettings) {
+      return;
+    }
+
+    const voice = voices.find((item) => item.identifier === voiceIdentifier);
+    const nextSettings = {
+      ...audioSettings,
+      voiceIdentifier,
+      language: voice?.language ?? audioSettings.language,
+    };
+    setAudioSettings(nextSettings);
+    await updateAudioSettings(db, nextSettings);
+  }
+
   function handleBack() {
     if (router.canGoBack()) {
       router.back();
@@ -283,9 +368,13 @@ export function useReaderViewModel() {
     next,
     text,
     settings,
+    audioSettings,
     loading,
     isSpeaking,
     theme,
+    voices,
+    brightness,
+    settingsVisible,
     scrollRef,
     handleBack,
     handlePlay,
@@ -293,6 +382,13 @@ export function useReaderViewModel() {
     handleScroll,
     handleScrollEnd,
     seekAudio,
+    setBrightness,
+    updateBrightness,
+    setSettingsVisible,
+    updateAudioRate,
+    updateFontSize,
+    updateNarrationVoice,
+    updateReaderTheme,
     openAdjacentChapter,
     openChapterList,
   };

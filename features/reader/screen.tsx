@@ -8,6 +8,7 @@ import { palette } from '@/lib/theme/tokens';
 import { ReaderContent } from './components/ReaderContent';
 import { ReaderHeader } from './components/ReaderHeader';
 import { ReaderPlayer } from './components/ReaderPlayer';
+import { ReaderSettingsDrawer } from './components/ReaderSettingsDrawer';
 import { useReaderViewModel } from './hooks/useReaderViewModel';
 import { styles } from './styles';
 
@@ -43,6 +44,7 @@ export function ReaderScreen() {
         theme={viewModel.theme}
         onBack={viewModel.handleBack}
         onOpenChapterList={viewModel.openChapterList}
+        onOpenSettings={() => viewModel.setSettingsVisible(true)}
       />
       <ReaderContent
         scrollRef={viewModel.scrollRef}
@@ -59,6 +61,18 @@ export function ReaderScreen() {
         onPlay={viewModel.handlePlay}
         onPause={viewModel.handlePause}
         onMoveAudio={viewModel.seekAudio}
+      />
+      <ReaderSettingsDrawer
+        visible={viewModel.settingsVisible}
+        settings={viewModel.settings}
+        audioSettings={viewModel.audioSettings}
+        brightness={viewModel.brightness}
+        onClose={() => viewModel.setSettingsVisible(false)}
+        onThemeChange={viewModel.updateReaderTheme}
+        onFontSizeChange={viewModel.updateFontSize}
+        onBrightnessChange={viewModel.updateBrightness}
+        onAudioRateChange={viewModel.updateAudioRate}
+        onVoiceChange={viewModel.updateNarrationVoice}
       />
     </Screen>
   );

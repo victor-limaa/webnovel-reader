@@ -1,7 +1,7 @@
 import { StyleSheet, View, type StyleProp, type ViewProps, type ViewStyle } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { palette } from '@/lib/theme/tokens';
+import { useAppTheme } from '@/lib/theme/AppThemeProvider';
 
 type ScreenProps = ViewProps & {
   padded?: boolean;
@@ -10,9 +10,11 @@ type ScreenProps = ViewProps & {
 };
 
 export function Screen({ children, padded = true, edges, safeAreaStyle, style, ...props }: ScreenProps) {
+  const { theme } = useAppTheme();
+
   return (
-    <SafeAreaView edges={edges} style={[styles.safeArea, safeAreaStyle]}>
-      <View style={[styles.container, padded && styles.padded, style]} {...props}>
+    <SafeAreaView edges={edges} style={[styles.safeArea, { backgroundColor: theme.background }, safeAreaStyle]}>
+      <View style={[styles.container, { backgroundColor: theme.background }, padded && styles.padded, style]} {...props}>
         {children}
       </View>
     </SafeAreaView>
@@ -22,11 +24,9 @@ export function Screen({ children, padded = true, edges, safeAreaStyle, style, .
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: palette.paper,
   },
   container: {
     flex: 1,
-    backgroundColor: palette.paper,
   },
   padded: {
     paddingHorizontal: 20,

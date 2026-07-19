@@ -2,33 +2,37 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 
-import { getAudioSettings, getReaderSettings, updateAudioSettings, updateReaderSettings } from '@/lib/data/repository';
+import { getAudioSettings, updateAudioSettings } from '@/lib/data/repository';
 import type { AudioSettings, ReaderSettings } from '@/lib/data/types';
 import { useI18n } from '@/lib/i18n/I18nProvider';
 import { getSpeechLanguage, type AppLanguage } from '@/lib/i18n/translations';
+import { useAppTheme } from '@/lib/theme/AppThemeProvider';
 
 import type { SettingsViewModel } from '../types';
 
 export function useSettingsViewModel(): SettingsViewModel {
   const db = useSQLiteContext();
   const { language, setLanguage, t } = useI18n();
-  const [reader, setReader] = useState<ReaderSettings | null>(null);
+  const { readerSettings, updateReaderSettings } = useAppTheme();
+  const [reader, setReaderState] = useState<ReaderSettings | null>(readerSettings);
   const [audio, setAudio] = useState<AudioSettings | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const [readerSettings, audioSettings] = await Promise.all([
-        getReaderSettings(db),
-        getAudioSettings(db),
-      ]);
+      const audioSettings = await getAudioSettings(db);
 
-      setReader(readerSettings);
+      setReaderState(readerSettings);
       setAudio(audioSettings ? { ...audioSettings, voiceIdentifier: null } : null);
     }
 
     load();
-  }, [db]);
+  }, [db, readerSettings]);
+
+  function setReader(settings: ReaderSettings) {
+    setReaderState(settings);
+    updateReaderSettings(settings);
+  }
 
   async function save() {
     if (!reader || !audio) {
@@ -37,7 +41,7 @@ export function useSettingsViewModel(): SettingsViewModel {
 
     setSaving(true);
     try {
-      await Promise.all([updateReaderSettings(db, reader), updateAudioSettings(db, audio)]);
+      await Promise.all([updateReaderSettings(reader), updateAudioSettings(db, audio)]);
       Alert.alert(t('settings.savedTitle'), t('settings.savedMessage'));
     } catch (error) {
       Alert.alert(t('settings.saveErrorTitle'), error instanceof Error ? error.message : t('settings.saveErrorFallback'));
