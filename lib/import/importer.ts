@@ -10,7 +10,6 @@ export type PickedChapterDraft = {
   chapterNumber: number;
   sourceType: 'txt' | 'pdf';
   originalFileName: string;
-  sourceUri: string;
   text: string;
   wordCount: number;
   error?: string;
@@ -59,7 +58,6 @@ export async function pickChapterFiles(getFallbackTitle: (chapterNumber: number)
         chapterNumber: index + 1,
         sourceType,
         originalFileName: asset.name,
-        sourceUri: asset.uri,
         text,
         wordCount: countWords(text),
       });
@@ -70,7 +68,6 @@ export async function pickChapterFiles(getFallbackTitle: (chapterNumber: number)
         chapterNumber: index + 1,
         sourceType,
         originalFileName: asset.name,
-        sourceUri: asset.uri,
         text: '',
         wordCount: 0,
         error: error instanceof Error ? error.message : 'Nao foi possivel ler este arquivo.',
