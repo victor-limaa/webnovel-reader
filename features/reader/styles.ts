@@ -47,6 +47,20 @@ export const styles = StyleSheet.create({
   },
   body: {
     fontFamily: 'serif',
+    padding: 0,
+    textAlignVertical: 'top',
+  },
+  selectionHint: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
+    marginBottom: 14,
+  },
+  narrationPosition: {
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '900',
+    marginBottom: 10,
   },
   player: {
     minHeight: 82,

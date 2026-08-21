@@ -56,6 +56,12 @@ export function ReaderScreen() {
         onContentSizeChange={viewModel.handleContentSizeChange}
         onLayout={viewModel.handleScrollLayout}
         onScrollEnd={viewModel.handleScrollEnd}
+        onTextSelection={viewModel.handleTextSelection}
+        selectionHint={t('reader.selectionHint')}
+        narrationPositionLabel={t('reader.narrationPosition', {
+          offset: viewModel.charOffset,
+          progress: Math.round((viewModel.charOffset / Math.max(1, viewModel.text.length)) * 100),
+        })}
       />
       <ReaderPlayer
         isSpeaking={viewModel.isSpeaking}

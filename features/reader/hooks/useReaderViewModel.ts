@@ -3,7 +3,14 @@ import * as Brightness from 'expo-brightness';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView } from 'react-native';
+import {
+  Alert,
+  AppState,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type ScrollView,
+} from 'react-native';
 
 import {
   getAdjacentChapters,
@@ -41,7 +48,6 @@ export function useReaderViewModel() {
   const [brightness, setBrightness] = useState(1);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [scrollRatio, setScrollRatio] = useState(0);
   const [charOffset, setCharOffset] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [currentChunkIndex, setCurrentChunkIndex] = useState(0);
@@ -52,6 +58,8 @@ export function useReaderViewModel() {
   const scrollContentHeightRef = useRef(0);
   const scrollLayoutHeightRef = useRef(0);
   const restoredScrollRef = useRef(false);
+  const narrationOffsetRef = useRef(0);
+  const scrollRatioRef = useRef(0);
 
   useEffect(() => {
     async function load() {
@@ -85,7 +93,6 @@ export function useReaderViewModel() {
       ]);
 
       setChapter(chapterResult);
-      setSettings(readerSettings);
       setAudioSettings(ttsSettings);
       setVoices(availableVoices);
       setBrightness(currentBrightness);
@@ -93,9 +100,11 @@ export function useReaderViewModel() {
       setNext(adjacent.next ?? null);
       setText(content);
       const initialScrollRatio = progress?.chapterId === chapterResult.id ? progress.scrollRatio : 0;
+      const initialNarrationOffset = progress?.chapterId === chapterResult.id ? progress.charOffset : 0;
       initialScrollRatioRef.current = initialScrollRatio;
-      setScrollRatio(initialScrollRatio);
-      setCharOffset(progress?.chapterId === chapterResult.id ? progress.charOffset : 0);
+      scrollRatioRef.current = initialScrollRatio;
+      narrationOffsetRef.current = initialNarrationOffset;
+      setCharOffset(initialNarrationOffset);
       setCurrentChunkIndex(0);
       setLoading(false);
     }
@@ -165,22 +174,42 @@ export function useReaderViewModel() {
     }
 
     const progress = getScrollProgress(event.nativeEvent, text.length);
-    setScrollRatio(progress.ratio);
-    setCharOffset(progress.offset);
+    scrollRatioRef.current = progress.ratio;
   }
 
   async function handleScrollEnd() {
-    await persistProgress(charOffset, scrollRatio);
+    await persistProgress(narrationOffsetRef.current, scrollRatioRef.current);
   }
 
-  function getCurrentSpeechOffset() {
+  const getCurrentSpeechOffset = useCallback(() => {
     return getEstimatedSpeechOffset({
-      baseOffset: isSpeaking ? speechStartOffsetRef.current : charOffset,
+      baseOffset: isSpeaking ? speechStartOffsetRef.current : narrationOffsetRef.current,
       startedAt: isSpeaking ? speechStartedAtRef.current : null,
       rate: audioSettings?.rate ?? 1,
       textLength: text.length,
     });
-  }
+  }, [audioSettings?.rate, isSpeaking, text.length]);
+
+  const updateNarrationOffset = useCallback((nextOffset: number) => {
+    const boundedOffset = Math.max(0, Math.min(text.length, Math.floor(nextOffset)));
+    narrationOffsetRef.current = boundedOffset;
+    setCharOffset(boundedOffset);
+    return boundedOffset;
+  }, [text.length]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active' || !chapter) {
+        return;
+      }
+
+      const nextOffset = isSpeaking ? getCurrentSpeechOffset() : narrationOffsetRef.current;
+      updateNarrationOffset(nextOffset);
+      persistProgress(nextOffset, scrollRatioRef.current).catch(() => undefined);
+    });
+
+    return () => subscription.remove();
+  }, [chapter, getCurrentSpeechOffset, isSpeaking, persistProgress, updateNarrationOffset]);
 
   const playFromChunk = useCallback(
     async (index: number, offset?: number, playbackSettings: AudioSettings | null = audioSettings) => {
@@ -210,13 +239,12 @@ export function useReaderViewModel() {
 
       setCurrentChunkIndex(boundedIndex);
       setIsSpeaking(true);
-      setCharOffset(speechOffset);
-      setScrollRatio(speechOffset / Math.max(1, text.length));
+      updateNarrationOffset(speechOffset);
       speechStartOffsetRef.current = speechOffset;
       speechStartedAtRef.current = Date.now();
       speechTokenRef.current += 1;
       const speechToken = speechTokenRef.current;
-      await persistProgress(speechOffset, speechOffset / Math.max(1, text.length));
+      await persistProgress(speechOffset, scrollRatioRef.current);
 
       speakChunk(speechText, playbackSettings, {
         onDone: async () => {
@@ -225,7 +253,8 @@ export function useReaderViewModel() {
           }
 
           const nextIndex = boundedIndex + 1;
-          await persistProgress(chunk.end, chunk.end / Math.max(1, text.length));
+          updateNarrationOffset(chunk.end);
+          await persistProgress(chunk.end, scrollRatioRef.current);
 
           if (nextIndex < chunks.length) {
             playFromChunk(nextIndex, undefined, playbackSettings);
@@ -257,7 +286,7 @@ export function useReaderViewModel() {
         },
       });
     },
-    [audioSettings, chapter, chunks, next, persistProgress, router, text.length],
+    [audioSettings, chapter, chunks, next, persistProgress, router, t, updateNarrationOffset],
   );
 
   async function handlePlay() {
@@ -268,15 +297,23 @@ export function useReaderViewModel() {
 
   async function handlePause() {
     const nextOffset = getCurrentSpeechOffset();
-    const nextRatio = nextOffset / Math.max(1, text.length);
 
     speechTokenRef.current += 1;
     await stopSpeech();
     setIsSpeaking(false);
     speechStartedAtRef.current = null;
-    setCharOffset(nextOffset);
-    setScrollRatio(nextRatio);
-    await persistProgress(nextOffset, nextRatio);
+    updateNarrationOffset(nextOffset);
+    await persistProgress(nextOffset, scrollRatioRef.current);
+  }
+
+  async function handleTextSelection(start: number, end: number) {
+    const nextOffset = updateNarrationOffset(Math.min(start, end));
+    setCurrentChunkIndex(getChunkIndexForOffset(chunks, nextOffset, 0));
+    speechTokenRef.current += 1;
+    await stopSpeech();
+    setIsSpeaking(false);
+    speechStartedAtRef.current = null;
+    await persistProgress(nextOffset, scrollRatioRef.current);
   }
 
   async function seekAudio(direction: -1 | 1) {
@@ -366,7 +403,19 @@ export function useReaderViewModel() {
     await updateAudioSettings(db, nextSettings);
   }
 
-  function handleBack() {
+  async function saveAndStopNarration() {
+    const nextOffset = isSpeaking ? getCurrentSpeechOffset() : narrationOffsetRef.current;
+    speechTokenRef.current += 1;
+    await stopSpeech();
+    setIsSpeaking(false);
+    speechStartedAtRef.current = null;
+    updateNarrationOffset(nextOffset);
+    await persistProgress(nextOffset, scrollRatioRef.current);
+  }
+
+  async function handleBack() {
+    await saveAndStopNarration();
+
     if (router.canGoBack()) {
       router.back();
       return;
@@ -380,14 +429,16 @@ export function useReaderViewModel() {
     router.replace('/');
   }
 
-  function openChapterList() {
+  async function openChapterList() {
     if (chapter) {
+      await saveAndStopNarration();
       router.push(`/novel/${chapter.novelId}`);
     }
   }
 
-  function openAdjacentChapter(target: Chapter | null) {
+  async function openAdjacentChapter(target: Chapter | null) {
     if (target) {
+      await saveAndStopNarration();
       router.replace(`/reader/${target.id}`);
     }
   }
@@ -397,6 +448,7 @@ export function useReaderViewModel() {
     previous,
     next,
     text,
+    charOffset,
     settings,
     audioSettings,
     loading,
@@ -413,6 +465,7 @@ export function useReaderViewModel() {
     handleContentSizeChange,
     handleScrollLayout,
     handleScrollEnd,
+    handleTextSelection,
     seekAudio,
     setBrightness,
     updateBrightness,

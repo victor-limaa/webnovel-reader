@@ -1,5 +1,13 @@
-import { type RefObject } from 'react';
-import { ScrollView, Text, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { useRef, type RefObject } from 'react';
+import {
+  ScrollView,
+  Text,
+  TextInput,
+  type LayoutChangeEvent,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type TextInputSelectionChangeEventData,
+} from 'react-native';
 
 import type { ReaderSettings } from '@/lib/data/types';
 
@@ -16,6 +24,9 @@ type ReaderContentProps = {
   onContentSizeChange: (width: number, height: number) => void;
   onLayout: (event: LayoutChangeEvent) => void;
   onScrollEnd: () => Promise<void>;
+  onTextSelection: (start: number, end: number) => void;
+  selectionHint: string;
+  narrationPositionLabel: string;
 };
 
 export function ReaderContent({
@@ -28,7 +39,21 @@ export function ReaderContent({
   onContentSizeChange,
   onLayout,
   onScrollEnd,
+  onTextSelection,
+  selectionHint,
+  narrationPositionLabel,
 }: ReaderContentProps) {
+  const userInteractedWithTextRef = useRef(false);
+
+  function handleSelectionChange(event: NativeSyntheticEvent<TextInputSelectionChangeEventData>) {
+    if (!userInteractedWithTextRef.current) {
+      return;
+    }
+
+    const { start, end } = event.nativeEvent.selection;
+    onTextSelection(start, end);
+  }
+
   return (
     <ScrollView
       ref={scrollRef}
@@ -41,7 +66,19 @@ export function ReaderContent({
       onScrollEndDrag={onScrollEnd}
       scrollEventThrottle={600}>
       <Text style={[styles.chapterTitle, { color: theme.text }]}>{title}</Text>
-      <Text
+      <Text style={[styles.selectionHint, { color: theme.muted }]}>{selectionHint}</Text>
+      <Text style={[styles.narrationPosition, { color: theme.accent }]}>{narrationPositionLabel}</Text>
+      <TextInput
+        value={text}
+        multiline
+        scrollEnabled={false}
+        showSoftInputOnFocus={false}
+        selectionColor={theme.accent}
+        onChangeText={() => undefined}
+        onPressIn={() => {
+          userInteractedWithTextRef.current = true;
+        }}
+        onSelectionChange={handleSelectionChange}
         style={[
           styles.body,
           {
@@ -49,9 +86,8 @@ export function ReaderContent({
             fontSize: settings.fontSize,
             lineHeight: Math.round(settings.fontSize * settings.lineHeight),
           },
-        ]}>
-        {text}
-      </Text>
+        ]}
+      />
     </ScrollView>
   );
 }
