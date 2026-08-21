@@ -12,8 +12,16 @@ type PdfJsWorkerModule = typeof import('pdfjs-dist/legacy/build/pdf.worker');
 type PdfWorkerGlobal = typeof globalThis & {
   URL?: unknown;
   URLSearchParams?: unknown;
+  DOMException?: unknown;
   pdfjsWorker?: PdfJsWorkerModule;
 };
+
+class NativeDOMException extends Error {
+  constructor(message = '', name = 'Error') {
+    super(message);
+    this.name = name;
+  }
+}
 
 const textOnlyCanvasFactory = {
   create() {
@@ -27,6 +35,7 @@ function installNativePdfGlobals() {
   const pdfGlobal = globalThis as Record<string, unknown>;
   pdfGlobal.URL ??= URL;
   pdfGlobal.URLSearchParams ??= URLSearchParams;
+  pdfGlobal.DOMException ??= NativeDOMException;
 }
 
 async function loadPdfJs(): Promise<PdfJsModule> {

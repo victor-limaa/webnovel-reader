@@ -53,6 +53,8 @@ export function ReaderScreen() {
         settings={viewModel.settings}
         theme={viewModel.theme}
         onScroll={viewModel.handleScroll}
+        onContentSizeChange={viewModel.handleContentSizeChange}
+        onLayout={viewModel.handleScrollLayout}
         onScrollEnd={viewModel.handleScrollEnd}
       />
       <ReaderPlayer

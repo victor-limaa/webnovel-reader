@@ -3,7 +3,7 @@ import * as Brightness from 'expo-brightness';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView } from 'react-native';
+import { Alert, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent, type ScrollView } from 'react-native';
 
 import {
   getAdjacentChapters,
@@ -48,6 +48,10 @@ export function useReaderViewModel() {
   const speechStartOffsetRef = useRef(0);
   const speechStartedAtRef = useRef<number | null>(null);
   const speechTokenRef = useRef(0);
+  const initialScrollRatioRef = useRef(0);
+  const scrollContentHeightRef = useRef(0);
+  const scrollLayoutHeightRef = useRef(0);
+  const restoredScrollRef = useRef(false);
 
   useEffect(() => {
     async function load() {
@@ -56,6 +60,9 @@ export function useReaderViewModel() {
       }
 
       setLoading(true);
+      restoredScrollRef.current = false;
+      scrollContentHeightRef.current = 0;
+      scrollLayoutHeightRef.current = 0;
       await stopSpeech();
       setIsSpeaking(false);
       speechStartedAtRef.current = null;
@@ -85,7 +92,9 @@ export function useReaderViewModel() {
       setPrevious(adjacent.previous ?? null);
       setNext(adjacent.next ?? null);
       setText(content);
-      setScrollRatio(progress?.chapterId === chapterResult.id ? progress.scrollRatio : 0);
+      const initialScrollRatio = progress?.chapterId === chapterResult.id ? progress.scrollRatio : 0;
+      initialScrollRatioRef.current = initialScrollRatio;
+      setScrollRatio(initialScrollRatio);
       setCharOffset(progress?.chapterId === chapterResult.id ? progress.charOffset : 0);
       setCurrentChunkIndex(0);
       setLoading(false);
@@ -105,13 +114,34 @@ export function useReaderViewModel() {
   const chunks = useMemo(() => splitForSpeech(text), [text]);
   const theme = readerThemes[settings?.theme ?? 'paper'];
 
-  useEffect(() => {
-    if (!loading && scrollRatio > 0) {
-      requestAnimationFrame(() => {
-        scrollRef.current?.scrollTo({ y: 6000 * scrollRatio, animated: false });
-      });
+  const restoreInitialScroll = useCallback(() => {
+    if (loading || restoredScrollRef.current) {
+      return;
     }
-  }, [loading, scrollRatio]);
+
+    const contentHeight = scrollContentHeightRef.current;
+    const layoutHeight = scrollLayoutHeightRef.current;
+    if (contentHeight <= 0 || layoutHeight <= 0) {
+      return;
+    }
+
+    restoredScrollRef.current = true;
+    const maxScroll = Math.max(0, contentHeight - layoutHeight);
+    const y = maxScroll * initialScrollRatioRef.current;
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ y, animated: false });
+    });
+  }, [loading]);
+
+  function handleContentSizeChange(_width: number, height: number) {
+    scrollContentHeightRef.current = height;
+    restoreInitialScroll();
+  }
+
+  function handleScrollLayout(event: LayoutChangeEvent) {
+    scrollLayoutHeightRef.current = event.nativeEvent.layout.height;
+    restoreInitialScroll();
+  }
 
   const persistProgress = useCallback(
     async (nextOffset: number, nextRatio: number) => {
@@ -380,6 +410,8 @@ export function useReaderViewModel() {
     handlePlay,
     handlePause,
     handleScroll,
+    handleContentSizeChange,
+    handleScrollLayout,
     handleScrollEnd,
     seekAudio,
     setBrightness,

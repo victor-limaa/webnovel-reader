@@ -1,5 +1,5 @@
 import { type RefObject } from 'react';
-import { ScrollView, Text, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { ScrollView, Text, type LayoutChangeEvent, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 import type { ReaderSettings } from '@/lib/data/types';
 
@@ -13,16 +13,30 @@ type ReaderContentProps = {
   settings: ReaderSettings;
   theme: ReaderTheme;
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
+  onContentSizeChange: (width: number, height: number) => void;
+  onLayout: (event: LayoutChangeEvent) => void;
   onScrollEnd: () => Promise<void>;
 };
 
-export function ReaderContent({ scrollRef, text, title, settings, theme, onScroll, onScrollEnd }: ReaderContentProps) {
+export function ReaderContent({
+  scrollRef,
+  text,
+  title,
+  settings,
+  theme,
+  onScroll,
+  onContentSizeChange,
+  onLayout,
+  onScrollEnd,
+}: ReaderContentProps) {
   return (
     <ScrollView
       ref={scrollRef}
       style={{ backgroundColor: theme.background }}
       contentContainerStyle={styles.content}
       onScroll={onScroll}
+      onContentSizeChange={onContentSizeChange}
+      onLayout={onLayout}
       onMomentumScrollEnd={onScrollEnd}
       onScrollEndDrag={onScrollEnd}
       scrollEventThrottle={600}>
