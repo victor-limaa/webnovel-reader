@@ -83,25 +83,21 @@ Structured data is stored in SQLite, while the full chapter content is kept as t
 
 ## Architecture
 
-The project follows a feature-oriented organization. Routes only connect URLs to screens, while presentation rules and state remain close to their respective domains.
+The project uses a feature-first MVVM architecture blended with React Native and Expo Router conventions. The `@/` alias points to `src/`. Route files remain in the root `app/` directory and are thin adapters with no application logic. `app.json` explicitly configures this router root so the organizational `src/app/` directory is never interpreted as routes.
 
 ```text
-Routes (app/)
-    │
-    ▼
-Screens and components (features/ and components/)
-    │
-    ▼
-Hooks / View Models (features/*/hooks/)
-    │
-    ▼
-Infrastructure (lib/)
-    ├── repository and SQLite
-    ├── text files
-    ├── TXT/PDF import
-    ├── internationalization
-    ├── themes
-    └── text-to-speech
+Routes (app/) ──► Screens / Views (src/features/*/*.screen.tsx)
+                         │
+                         ▼
+                 Hooks / ViewModels
+                         │
+              ┌──────────┴──────────┐
+              ▼                     ▼
+      Feature model + API       Infra capabilities
+              │                     │
+              └──────────┬──────────┘
+                         ▼
+               Shared contracts and UI
 ```
 
 ### Routing layer
@@ -116,31 +112,26 @@ The `app/` directory uses Expo Router's file-based routing convention. Its files
 | `app/novel/[novelId].tsx` | Webnovel details and chapters |
 | `app/reader/[chapterId].tsx` | Chapter reading and narration |
 
-The root layout composes safe-area, navigation, SQLite, theme, and internationalization providers. The main navigation contains three tabs—Library, Import, and Settings—and a stack for the detail and reader screens.
+Composition lives in `src/app/`: `navigation/` owns navigators, `providers/` owns global React providers, `bootstrap/` initializes infrastructure, and `config/` holds application configuration.
 
 ### Feature modules
 
-Each directory under `features/` contains the interface and behavior of a specific domain:
+Each directory under `src/features/` contains the interface and behavior of a specific domain:
 
-- `features/library/`: library, webnovel details, and chapter listing;
-- `features/importer/`: file selection, draft review, and manual input;
-- `features/reader/`: content, audio controls, quick settings, and progress;
-- `features/settings/`: language, appearance, and narration settings.
+- `model/` contains types, transformations, and pure rules without React;
+- `hooks/` contains ViewModels, state, actions, effects, and orchestration;
+- `components/` contains views used only by that feature;
+- `api/` contains domain-specific persistence and external adapters;
+- `*.screen.tsx` is the declarative View;
+- `index.ts` is the feature's public entry point.
 
 Screens are composed of smaller components and consume hooks that act as **View Models**. These hooks coordinate state, navigation, and infrastructure calls, leaving components focused on rendering and user interaction.
 
-### Shared infrastructure
+### Shared and infrastructure
 
-The `lib/` directory contains services independent of the user interface:
+`src/shared/` contains code genuinely reused across features: the design system, global hooks, i18n contracts, domain contracts, and generic utilities. Code starts inside a feature and moves to `shared` only after it has more than one consumer.
 
-- `lib/data/`: schema, migrations, types, and SQLite repository operations;
-- `lib/files/`: chapter text normalization and persistence;
-- `lib/import/`: file selection and platform-specific PDF implementations;
-- `lib/i18n/`: provider and translation dictionaries;
-- `lib/theme/`: visual tokens, reader themes, and global preferences;
-- `lib/tts/`: text preparation and speech playback.
-
-Reusable visual components live in `components/`, while global constants and hooks live in `constants/` and `hooks/`.
+`src/infra/` exposes technical capabilities rather than business operations: SQLite migration, chapter file storage, platform PDF extraction, speech playback, and device brightness. Operations such as listing novels, saving reading progress, or updating settings stay in the owning feature's `api/` directory.
 
 ### Platform-specific implementations
 
@@ -178,20 +169,23 @@ Operations that create a webnovel and its chapters use an exclusive transaction,
 
 ```text
 webnovel-reader/
-├── app/                  # Expo Router routes and layouts
-│   ├── (tabs)/           # Library, import, and settings
-│   ├── novel/            # Dynamic webnovel detail route
-│   └── reader/           # Dynamic reader route
+├── app/                  # Thin Expo Router route adapters
+├── src/
+│   ├── app/              # Navigation, providers, bootstrap, and config
+│   ├── features/
+│   │   ├── importer/     # api, model, hooks, components, and View
+│   │   ├── library/
+│   │   ├── reader/
+│   │   └── settings/
+│   ├── infra/            # Storage, files, speech, and device capabilities
+│   └── shared/
+│       ├── design-system/# Global components, tokens, and theme contract
+│       ├── components/   # Other global components
+│       ├── hooks/
+│       ├── i18n/
+│       ├── types/
+│       └── utils/
 ├── assets/images/        # Icons, splash screen, and static images
-├── components/           # Shared visual components
-├── constants/            # Global constants
-├── features/             # Feature-oriented modules
-│   ├── importer/
-│   ├── library/
-│   ├── reader/
-│   └── settings/
-├── hooks/                # Global hooks and platform adaptations
-├── lib/                  # Data, files, import, i18n, theme, and TTS
 ├── shims/                # Native dependency compatibility shims
 ├── scripts/              # Project utility scripts
 ├── app.json              # Expo configuration
@@ -249,10 +243,13 @@ TypeScript is configured in strict mode. The project does not currently have an 
 
 ## Development conventions
 
-- Keep routes small and delegate their implementation to `features/`.
+- Keep routes small and delegate their implementation to `src/features/`.
+- Keep Screens declarative and move state, actions, navigation, and effects to ViewModel hooks.
+- Keep feature models free from React and native framework dependencies.
+- Keep business operations in feature `api/` modules and technical capabilities in `infra/`.
+- Promote local code to `shared/` only when multiple features use it.
 - Use PascalCase for components and camelCase for functions and hooks.
-- Use lowercase names for utility modules, such as `text-storage.ts`.
-- Use the `@/` alias for imports from the project root when it improves readability.
+- Use the `@/` alias for imports from `src/`.
 - Keep platform variants next to their base module with suffixes such as `.ios.tsx`, `.android.ts`, `.native.ts`, or `.web.ts`.
 - Follow the existing style: two-space indentation, single quotes, semicolons, and trailing commas in multiline structures.
 

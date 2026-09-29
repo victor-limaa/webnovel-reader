@@ -1,4 +1,4 @@
-import { ReaderScreen } from '@/features/reader/screen';
+import { ReaderScreen } from '@/features/reader';
 
 export default function ReaderRoute() {
   return <ReaderScreen />;

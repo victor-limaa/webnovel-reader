@@ -1,4 +1,4 @@
-import { NovelDetailScreen } from '@/features/library/detail-screen';
+import { NovelDetailScreen } from '@/features/library';
 
 export default function NovelDetailRoute() {
   return <NovelDetailScreen />;

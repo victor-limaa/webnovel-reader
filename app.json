@@ -41,6 +41,11 @@
       ],
       "expo-sqlite"
     ],
+    "extra": {
+      "router": {
+        "root": "app"
+      }
+    },
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
